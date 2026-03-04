@@ -17,6 +17,11 @@ function handleButtonClick(e) {
     try {
       const tokens = tokenize(expression);
       console.log(tokens);
+      const postfixData = infixToPostfix(tokens);
+      console.log(postfixData);
+      const ans=evaluatePostfix(postfixData);
+      updateDisplay();
+      console.log(ans);
     } catch (err) {
       displayinput.value = "Error";
     }
@@ -52,7 +57,6 @@ function tokenize(expression) {
       currentInput += val;
       hasDot = true;
     } else if ("+-*/".includes(val)) {
-      // console.log(currentInput)
       if (val == "-" && (i == 0 || "+-*/".includes(expression[i - 1]))) {
         currentInput += val;
       } else {
@@ -75,6 +79,65 @@ function tokenize(expression) {
     myToken.push(currentInput);
   }
   return myToken;
+}
+
+function infixToPostfix(tokens) {
+    const output = [];
+    const stack = [];
+
+    for(let i=0;i<tokens.length;i++){
+        if(!isNaN(tokens[i])){
+            output.push(tokens[i]);
+        }else{
+            while(stack.length>0 && precedence(stack[stack.length-1])>=precedence(tokens[i])){
+                output.push(stack.pop());
+            }
+            stack.push(tokens[i]);
+        }
+        // console.log(!is(tokens[i]));
+    }
+    while(stack.length>0){
+        output.push(stack.pop());
+    }
+    
+    return output;
+}
+function precedence(op){
+    if(op=="+" || op=="-"){
+        return 1;
+    }else if(op=="*" || op=="/"){
+        return 2;
+    }
+}
+
+function evaluatePostfix(postfix) {
+   const stack = [];
+   for(let i=0;i<postfix.length;i++){
+    if(!isNaN(postfix[i])){
+        stack.push(parseFloat(postfix[i]));
+    }else{
+        const b = stack.pop();
+        const a = stack.pop();
+        let result;
+        if(postfix[i]=="+"){
+            result = a+b;
+        }else if(postfix[i]=="-"){
+            result = a-b;
+        }else if(postfix[i]=="*"){
+            result = a*b;
+        }else if(postfix[i]=="/"){
+            if(b==0){
+                throw new Error("Division by zero");
+            }
+            result = a/b;
+        }
+        stack.push(result);
+    }
+
+    // console.log((postfix[i]));
+   }
+   expression=stack[0];
+   return stack[0];
 }
 
 // function appendNumber(number) {
