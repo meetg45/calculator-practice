@@ -13,7 +13,7 @@ body{
 }
 
 .main-container{
-    width: 450px;
+    width: 500px;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -60,20 +60,19 @@ body{
     flex-direction: column;
     gap: 10px;
 }
-.two-btn-row{
-    display: flex;
+.four-btn-row{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
-.first .btn{
-    min-width: 100px; 
-}
-.second .btn{
-    min-width: 150px; 
-}
+
 .main-grid{
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
+}
+.equal{
+    /* grid-row: 4/6; */
 }
 .number{
     background: #f8f9fa;
