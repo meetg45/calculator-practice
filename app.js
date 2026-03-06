@@ -1,6 +1,10 @@
 const displayinput = document.querySelector(".display-area input");
 const displaybtn = document.querySelectorAll(".buttons-area");
-
+const FUNCTIONS = ["sin", "cos", "tan", "log", "ln", "sqrt", "abs"];
+const CONSTANTS = {
+  pi: Math.PI,
+  e: Math.E,
+};
 displaybtn.forEach((a) => {
   a.addEventListener("click", handleButtonClick);
 });
@@ -18,12 +22,28 @@ function handleButtonClick(e) {
     backspace();
   } else if (e.target.classList.contains("equal")) {
     calculate();
-  }
+  } else if (e.target.classList.contains("factorial")) {
+    appendValue(e.target.innerText);
+  } else if (e.target.classList.contains("mod")) {
+    appendValue(e.target.innerText);
+  } else if (e.target.classList.contains("trigo")) {
+    appendValue(e.target.innerText);
+  } else if (e.target.classList.contains("sqrt")) {
+    appendValue("sqrt");
+  } else if (e.target.classList.contains("pi")) {
+    appendValue("pi");
+  } else if (e.target.classList.contains("x2")) {
+    appendValue("^2");
+  } else if (e.target.classList.contains("xy")) {
+    appendValue("^");
+  } else if (e.target.classList.contains("10x")) {
+    appendValue("10^(");
+  } 
   displayinput.scrollLeft = displayinput.scrollWidth;
 }
 
 function appendValue(value) {
-  const operator = "+-*/";
+  const operator = "+-*/%^";
   const lastChar = expression.slice(-1);
 
   if (value == "(") {
@@ -56,7 +76,9 @@ function appendValue(value) {
 }
 
 function updateDisplay() {
-  displayinput.value = expression;
+  let displayValue = expression.replaceAll("sqrt", "√").replaceAll("pi", "π").replaceAll("^", "^");
+
+  displayinput.value = displayValue;
 }
 
 function clearDisplay() {
@@ -91,6 +113,43 @@ function tokenize(expression) {
   let currentInput = "";
   let hasDot = false;
   for (let i = 0; i < expression.length; i++) {
+    let foundFunction = false;
+
+    for (const func of FUNCTIONS) {
+      if (expression.slice(i, i + func.length) == func) {
+        myToken.push(func);
+        i += func.length - 1;
+        foundFunction = true;
+        break;
+      }
+    }
+    if (foundFunction) {
+      continue;
+    }
+    let foundConstant = false;
+
+    for (const key in CONSTANTS) {
+      if (expression.slice(i, i + key.length) === key) {
+        myToken.push(key);
+        i += key.length - 1;
+        foundConstant = true;
+        break;
+      }
+    }
+    if (foundConstant) {
+      continue;
+    }
+    // if (expression.slice(i, i + 2) === "pi") {
+    //   myToken.push("pi");
+    //   i += 1;
+    //   continue;
+    // }
+
+    // if (expression[i] === "e") {
+    //   myToken.push("e");
+    //   continue;
+    // }
+
     let val = expression[i];
 
     if (!isNaN(val)) {
@@ -106,8 +165,7 @@ function tokenize(expression) {
       }
       currentInput += val;
       hasDot = true;
-    } else if ("+-*/".includes(val)) {
-      // console.log(currentInput)
+    } else if ("+-*/!%^".includes(val)) {
       if (val == "-" && (i == 0 || "+-*/(".includes(expression[i - 1]))) {
         if (expression[i + 1] === "(") {
           myToken.push("0");
@@ -154,17 +212,22 @@ function infixToPostfix(tokens) {
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i] == "(") {
       stack.push(tokens[i]);
+    } else if (FUNCTIONS.includes(tokens[i])) {
+      stack.push(tokens[i]);
     } else if (tokens[i] == ")") {
       while (stack.length && stack[stack.length - 1] !== "(") {
         output.push(stack.pop());
       }
       stack.pop();
-    } else if (!isNaN(tokens[i])) {
+      if (stack.length && FUNCTIONS.includes(stack[stack.length - 1])) {
+        output.push(stack.pop());
+      }
+    } else if (!isNaN(tokens[i]) || CONSTANTS[tokens[i]] !== undefined) {
       output.push(tokens[i]);
     } else {
       while (
         stack.length > 0 &&
-        precedence(stack[stack.length - 1]) >= precedence(tokens[i])
+        precedence(stack[stack.length - 1]) > precedence(tokens[i])
       ) {
         output.push(stack.pop());
       }
@@ -182,8 +245,21 @@ function precedence(op) {
   if (op == "+" || op == "-") {
     return 1;
   }
-  if (op == "*" || op == "/") {
+  if (op == "*" || op == "/" || op == "%") {
     return 2;
+  }
+  if (op === "^") {
+    return 3;
+  }
+  if (
+    op === "!" ||
+    op === "log" ||
+    op === "ln" ||
+    op === "sin" ||
+    op === "tan" ||
+    op === "cos"
+  ) {
+    return 4;
   }
   return 0;
 }
@@ -195,7 +271,18 @@ function evaluatePostfix(postfix) {
     const token = postfix[i];
 
     if (!isNaN(token)) {
-      stack.push(parseFloat(token));
+      stack.push(parseFloat(token));  
+    } else if (token === "!") {
+      stack.push(factorial(stack.pop()));
+    } else if (token === "^") {
+      const b = stack.pop();
+      const a = stack.pop();
+      stack.push(Math.pow(a, b));
+    } else if (CONSTANTS[token] !== undefined) {
+      stack.push(CONSTANTS[token]);
+    } else if (FUNCTION_MAP[token]) {
+      const a = stack.pop();
+      stack.push(FUNCTION_MAP[token](a));
     } else {
       const b = stack.pop();
       const a = stack.pop();
@@ -210,6 +297,8 @@ function evaluatePostfix(postfix) {
       } else if (token === "/") {
         if (b === 0) throw new Error("Division by zero");
         result = a / b;
+      } else if (token === "%") {
+        result = a % b;
       }
       stack.push(result);
     }
@@ -219,3 +308,30 @@ function evaluatePostfix(postfix) {
   }
   return stack[0];
 }
+
+function factorial(n) {
+  if (!Number.isInteger(n)) {
+    throw new Error("Factorial requires integer");
+  }
+  if (n < 0) {
+    throw new Error("Factorial undefined for negative numbers");
+  }
+  if (n > 170) {
+    throw new Error("Number too large for factorial");
+  }
+  let result = 1;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+const FUNCTION_MAP = {
+  sin: (x) => Math.sin((x * Math.PI) / 180),
+  cos: (x) => Math.cos((x * Math.PI) / 180),
+  tan: (x) => Math.tan((x * Math.PI) / 180),
+  log: (x) => Math.log10(x),
+  ln: (x) => Math.log(x),
+  sqrt: (x) => Math.sqrt(x),
+  abs: (x) => Math.abs(x),
+};
